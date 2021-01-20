@@ -1,9 +1,9 @@
 (define-module (gemini request)
+  #:use-module (gemini util)
   #:use-module (ice-9 textual-ports)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-9)
   #:use-module (web uri)
-  #:use-module (gemini util)
   #:export (gemini-request?
             gemini-request-uri
             gemini-request-meta

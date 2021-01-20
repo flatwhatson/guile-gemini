@@ -1,9 +1,9 @@
 (define-module (gemini response)
+  #:use-module (gemini util)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-9)
-  #:use-module (gemini util)
   #:export (gemini-response?
             gemini-response-status
             gemini-response-meta

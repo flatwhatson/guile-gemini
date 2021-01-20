@@ -1,8 +1,11 @@
 (define-module (gemini util)
+  #:use-module (gnutls)
   #:use-module (ice-9 binary-ports)
   #:use-module (rnrs bytevectors)
   #:use-module (system foreign)
-  #:export (bytevector-slice get-bytevector-crlf))
+  #:export (bytevector-slice
+            get-bytevector-crlf
+            get-bytevector-eof))
 
 (define *cr-byte* (char->integer #\return))
 (define *lf-byte* (char->integer #\newline))
@@ -24,14 +27,42 @@
   (pointer->bytevector
    (bytevector->pointer bv) count start))
 
+(define (get-bytevector-safe! port bv start count)
+  (catch 'gnutls-error
+    (lambda ()
+      (get-bytevector-some! port bv start count))
+    (lambda (key err proc . rest)
+      (if (eq? err error/premature-termination)
+          (eof-object)
+          (apply throw key err proc rest)))))
+
 (define (get-bytevector-crlf port maxlen)
-  (let ((bv (make-bytevector maxlen)))
-    (let loop ((start 0))
-      (let* ((count (get-bytevector-some! port bv start (- maxlen start)))
-             (eof (eof-object? count))
+  (let ((bv (make-bytevector (+ maxlen 2))))
+    (let loop ((start 0)
+               (count (+ maxlen 2)))
+      (let* ((res (get-bytevector-safe! port bv start count))
+             (eof (eof-object? res))
              (end (and (not eof)
-                       (bytevector-find-crlf bv start count))))
+                       (bytevector-find-crlf bv start res))))
         (cond (eof #f)
-              (end (unget-bytevector port bv (+ end 2))
+              (end (unget-bytevector port bv
+                                     (+ end 2)
+                                     (- (+ start res)
+                                        (+ end 2)))
                    (bytevector-slice bv 0 end))
-              (else (loop (+ start count))))))))
+              (else (loop (+ start res) (- count res))))))))
+
+(define (get-bytevector-eof port)
+  (let loop ((bv (make-bytevector 4096))
+             (start 0)
+             (count 4096))
+    (let ((res (get-bytevector-safe! port bv start count)))
+      (cond ((eof-object? res)
+             (bytevector-slice bv 0 start))
+            ((< res count)
+             (loop bv (+ start res) (- count res)))
+            (else
+             (let* ((len (bytevector-length bv))
+                    (new (make-bytevector (* 2 len))))
+               (bytevector-copy! bv 0 new 0 len)
+               (loop new len len)))))))
