@@ -7,6 +7,7 @@
   #:export (gemini-response?
             gemini-response-status
             gemini-response-meta
+            gemini-response-body
             gemini-response-success?
 
             build-gemini-response
@@ -33,13 +34,18 @@
 ;; 62 CERTIFICATE NOT VALID       (error message)
 
 (define-record-type <gemini-response>
-  (make-gemini-response status meta)
+  (make-gemini-response status meta body)
   gemini-response?
   (status gemini-response-status)
-  (meta gemini-response-meta))
+  (meta gemini-response-meta)
+  (body gemini-response-body))
+
+(define (gemini-status-success? code)
+  (and (>= code 20) (< code 30)))
 
 (define (gemini-response-success? rsp)
-  (= (gemini-response-status rsp) 20))
+  (gemini-status-success?
+   (gemini-response-status rsp)))
 
 (define (bad-response message . args)
   (throw 'bad-response message args))
@@ -49,9 +55,9 @@
   ;; TODO: check for valid meta value
   #t)
 
-(define* (build-gemini-response #:key status meta (validate? #t))
+(define* (build-gemini-response #:key status meta body (validate? #t))
   "Construct a Gemini response."
-  (let ((rsp (make-gemini-response status meta)))
+  (let ((rsp (make-gemini-response status meta body)))
     (when validate?
       (validate-gemini-response rsp))
     rsp))
@@ -84,7 +90,9 @@
       (bad-response "Invalid status code"))
     (let* ((status (parse-status-bytes b1 b2))
            (meta (utf8->string rest))
-           (rsp (make-gemini-response status meta)))
+           (body (and (gemini-status-success? status)
+                      (get-bytevector-eof port)))
+           (rsp (make-gemini-response status meta body)))
       (validate-gemini-response rsp)
       rsp)))
 
@@ -93,4 +101,7 @@
   (put-string port (number->string (gemini-response-status rsp)))
   (put-char port #\space)
   (put-string port (gemini-response-meta rsp))
-  (put-string port "\r\n"))
+  (put-string port "\r\n")
+  (let ((body (gemini-response-body rsp)))
+    (when body
+      (put-bytevector port body))))
