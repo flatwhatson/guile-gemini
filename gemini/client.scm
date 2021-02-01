@@ -2,6 +2,7 @@
   #:use-module (gemini request)
   #:use-module (gemini response)
   #:use-module (gnutls)
+  #:use-module (ice-9 suspendable-ports)
   #:use-module (srfi srfi-1)
   #:use-module (web uri)
   #:export (send-gemini-request))
@@ -25,6 +26,7 @@
       (catch 'system-error
         (lambda ()
           (connect sock (addrinfo:addr ai))
+          (fcntl sock F_SETFL (logior O_NONBLOCK (fcntl sock F_GETFL)))
           sock)
         (lambda args
           (close sock)
@@ -39,7 +41,22 @@
     (set-session-default-priority! session)
     (set-session-credentials! session cred)
 
-    (handshake session)
+    (define wait-until-readable
+      (let ((port (session-record-port session)))
+        (lambda ()
+          ((current-read-waiter) port))))
+
+    (let continue-handshake ()
+      (catch 'gnutls-error
+        (lambda ()
+          (handshake session))
+        (lambda (key err proc . rest)
+          (cond ((or (eq? err error/again)
+                     (eq? err error/interrupted))
+                 (wait-until-readable)
+                 (continue-handshake))
+                (else
+                 (apply throw key err proc rest))))))
 
     (let* ((data (car (session-peer-certificate-chain session)))
            (cert (import-x509-certificate data x509-certificate-format/der)))

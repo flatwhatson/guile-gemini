@@ -1,4 +1,5 @@
 (define-module (gemini util)
+  #:use-module (gemini fix-suspendable-ports)
   #:use-module (gnutls)
   #:use-module (ice-9 binary-ports)
   #:use-module (rnrs bytevectors)
