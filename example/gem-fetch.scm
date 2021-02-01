@@ -6,6 +6,7 @@
              (gemini response)
              (gnutls)
              (ice-9 getopt-long)
+             (ice-9 regex)
              (rnrs bytevectors)
              (srfi srfi-11)
              (web uri))
@@ -22,6 +23,24 @@ options:
 
 Send a Gemini request and print the response.
 ")))
+
+(define (normalize-uri uri)
+  (let* ((uri (if (string-match "^([a-zA-Z][a-zA-Z0-9.+-]*:)?//" uri) uri
+                  (string-append "gemini://" uri)))
+         (uri (string->uri-reference uri)))
+    (build-uri (or (uri-scheme uri) 'gemini)
+               #:userinfo (uri-userinfo uri)
+               #:host (uri-host uri)
+               #:port (uri-port uri)
+               #:path (let ((path (uri-path uri)))
+                        (cond ((not path) "/")
+                              ((string-null? path) "/")
+                              (else path)))
+               #:query (uri-query uri)
+               #:fragment (uri-fragment uri))))
+
+(define (build-request uri)
+  (build-gemini-request #:uri (normalize-uri uri)))
 
 (define (parse-proxy proxy)
   (cond ((not proxy)
@@ -52,7 +71,7 @@ Send a Gemini request and print the response.
          (uri   (and (pair? rest) (car rest))))
     (if (or help (not uri))
         (print-help args)
-        (let-values (((req) (build-gemini-request #:uri (string->uri uri)))
+        (let-values (((req) (build-request uri))
                      ((host port) (parse-proxy proxy))
                      ((cred) (load-credentials cert pkey)))
           (format #t "Request: ~a\n"
