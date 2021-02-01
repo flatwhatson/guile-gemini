@@ -41,10 +41,9 @@
     (set-session-default-priority! session)
     (set-session-credentials! session cred)
 
-    (define wait-until-readable
-      (let ((port (session-record-port session)))
-        (lambda ()
-          ((current-read-waiter) port))))
+    (define (wait-until-readable)
+      ((current-read-waiter)
+       (session-record-port session)))
 
     (let continue-handshake ()
       (catch 'gnutls-error

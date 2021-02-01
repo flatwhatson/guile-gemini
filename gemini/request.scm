@@ -12,6 +12,9 @@
             read-gemini-request
             write-gemini-request))
 
+;; TODO: store peer address info in request
+;; TODO: store peer certificate info in request
+
 (define-record-type <gemini-request>
   (make-gemini-request uri meta)
   gemini-request?
