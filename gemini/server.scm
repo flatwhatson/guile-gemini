@@ -3,6 +3,7 @@
   #:use-module (fibers conditions)
   #:use-module (gemini request)
   #:use-module (gemini response)
+  #:use-module (gemini util tls)
   #:use-module (gnutls)
   #:use-module (ice-9 suspendable-ports)
   #:export (run-server))
@@ -34,21 +35,7 @@
     (set-session-default-priority! session)
     (set-session-credentials! session cred)
 
-    (define (wait-until-readable)
-      ((current-read-waiter)
-       (session-record-port session)))
-
-    (let continue-handshake ()
-      (catch 'gnutls-error
-        (lambda ()
-          (handshake session))
-        (lambda (key err proc . rest)
-          (cond ((or (eq? err error/again)
-                     (eq? err error/interrupted))
-                 (wait-until-readable)
-                 (continue-handshake))
-                (else
-                 (apply throw key err proc rest))))))
+    (tls-handshake session)
 
     session))
 

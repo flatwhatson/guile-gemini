@@ -1,7 +1,11 @@
-(define-module (gemini fix-suspendable-ports)
+(define-module (gemini util fix-suspendable-ports)
   #:use-module (ice-9 ports internal)
   #:use-module (ice-9 suspendable-ports)
   #:use-module (rnrs bytevectors))
+
+;; HACK: This module monkey-patches the `get-bytevector-some!' method from
+;; (ice-9 suspenable-ports) to fix a bug which was introduced in guile commit
+;; 8150823fc.  This should be removed once a fix has been merged in Guile.
 
 (define fill-input
   (@@ (ice-9 suspendable-ports) fill-input))

@@ -1,5 +1,5 @@
 (define-module (gemini response)
-  #:use-module (gemini util)
+  #:use-module (gemini util io)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)
   #:use-module (rnrs bytevectors)
