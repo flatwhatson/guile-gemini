@@ -1,6 +1,7 @@
 (define-module (gemini client)
   #:use-module (gemini request)
   #:use-module (gemini response)
+  #:use-module (gemini util log)
   #:use-module (gemini util tls)
   #:use-module (gnutls)
   #:use-module (ice-9 suspendable-ports)
@@ -21,18 +22,23 @@
 
 (define (open-socket host port)
   (let loop ((addresses (resolve-addresses host port)))
-    (let* ((ai   (car addresses))
+    (let* ((addr (addrinfo:addr (car addresses)))
            (sock (with-fluids ((%default-port-encoding #f))
-                   (socket (addrinfo:fam ai) SOCK_STREAM IPPROTO_IP))))
+                   (socket (sockaddr:fam addr) SOCK_STREAM IPPROTO_IP))))
       (catch 'system-error
         (lambda ()
-          (connect sock (addrinfo:addr ai))
+          (log-info "Connecting to ~a:~a [~a]"
+                    host (sockaddr:port addr)
+                    (inet-ntop (sockaddr:fam addr)
+                               (sockaddr:addr addr)))
+          (connect sock addr)
           (fcntl sock F_SETFL (logior O_NONBLOCK (fcntl sock F_GETFL)))
           sock)
-        (lambda args
+        (lambda (key subr msg args rest)
+          (log-warn "~a [~a]" (apply format #f msg args) (car rest))
           (close sock)
           (if (null? (cdr addresses))
-              (apply throw args)
+              (throw key subr msg args rest)
               (loop (cdr addresses))))))))
 
 (define (open-session socket host cred)
@@ -47,6 +53,7 @@
     ;; TODO: fall back to TOFU for self-signed certificates
     ;; https://drewdevault.com/2020/09/21/Gemini-TOFU.html
 
+    (log-info "Performing handshake")
     (tls-handshake session)
 
     (let* ((data (car (session-peer-certificate-chain session)))
@@ -74,11 +81,16 @@
          (session (open-session socket host cred))
          (record  (session-record-port session)))
 
+    (log-info "Sending request: ~a"
+              (uri->string (gemini-request-uri req)))
     (setvbuf record 'block)
     (write-gemini-request req record)
     (force-output record)
 
     (let ((rsp (read-gemini-response record)))
+      (log-info "Received response: ~a ~a"
+                (gemini-response-status rsp)
+                (gemini-response-meta rsp))
       (close-port record)
       (close-port socket)
       rsp)))

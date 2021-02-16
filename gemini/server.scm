@@ -3,9 +3,11 @@
   #:use-module (fibers conditions)
   #:use-module (gemini request)
   #:use-module (gemini response)
+  #:use-module (gemini util log)
   #:use-module (gemini util tls)
   #:use-module (gnutls)
   #:use-module (ice-9 suspendable-ports)
+  #:use-module (web uri)
   #:export (run-server))
 
 (define (make-default-socket family addr port)
@@ -35,28 +37,39 @@
     (set-session-default-priority! session)
     (set-session-credentials! session cred)
 
+    (log-info "Performing handshake")
     (tls-handshake session)
 
     session))
 
-(define (handle-client client cred handler)
+(define (handle-client client addr cred handler)
+  (log-info "Connection from ~a:~a"
+            (inet-ntop (sockaddr:fam addr)
+                       (sockaddr:addr addr))
+            (sockaddr:port addr))
+
   (let* ((session (open-session client cred))
          (record  (session-record-port session)))
 
     (setvbuf record 'block)
-    (let* ((req (read-gemini-request record))
-           (rsp (handler req)))
+    (let ((req (read-gemini-request record)))
+      (log-info "Received request: ~a"
+                (uri->string (gemini-request-uri req)))
 
-      (write-gemini-response rsp record)
-      (close-port record)
-      (close-port client))))
+      (let ((rsp (handler req)))
+        (log-info "Sending response: ~a ~a"
+                  (gemini-response-status rsp)
+                  (gemini-response-meta rsp))
+        (write-gemini-response rsp record)
+        (close-port record)
+        (close-port client)))))
 
 (define (accept-loop server cred handler)
   (let loop ()
     (let ((client (accept server (logior SOCK_NONBLOCK SOCK_CLOEXEC))))
       (spawn-fiber
        (lambda ()
-         (handle-client (car client) cred handler))
+         (handle-client (car client) (cdr client) cred handler))
        #:parallel? #t)
       (loop))))
 
@@ -67,6 +80,11 @@
                      (port 1965)
                      (socket (make-default-socket family addr port))
                      cred)
+  (let ((addr (getsockname socket)))
+    (log-info "Listening on ~a:~a"
+              (inet-ntop (sockaddr:fam addr)
+                         (sockaddr:addr addr))
+              (sockaddr:port addr)))
   (listen socket 1024)
   (sigaction SIGPIPE SIG_IGN)
   (let ((finished? (make-condition)))

@@ -74,16 +74,11 @@ Send a Gemini request and print the response.
         (let-values (((req) (build-request uri))
                      ((host port) (parse-proxy proxy))
                      ((cred) (load-credentials cert pkey)))
-          (format #t "Request: ~a\n"
-                  (uri->string (gemini-request-uri req)))
-          (let ((rsp (send-gemini-request req host port cred)))
-            (format #t "Response: ~a ~a\n"
-                    (gemini-response-status rsp)
-                    (gemini-response-meta rsp))
-            (let ((body (gemini-response-body rsp)))
-              (when body
-                (let* ((text (utf8->string body))
-                       (last (string-ref text (1- (string-length text)))))
-                  (display text)
-                  (unless (char=? last #\newline)
-                    (newline))))))))))
+          (let* ((rsp (send-gemini-request req host port cred))
+                 (body (gemini-response-body rsp)))
+            (when body
+              (let* ((text (utf8->string body))
+                     (last (string-ref text (1- (string-length text)))))
+                (display text)
+                (unless (char=? last #\newline)
+                  (newline)))))))))
