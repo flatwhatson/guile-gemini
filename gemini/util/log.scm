@@ -3,24 +3,29 @@
   #:use-module (srfi srfi-11)
   #:use-module (srfi srfi-26)
   #:use-module (ice-9 format)
-  #:export (log-debug
+  #:export (set-gemini-log-level!
+            set-gemini-log-port!
+            log-debug
             log-info
             log-warn
             log-error))
 
-(define log-port current-error-port)
-
+(define log-port)
 (define log-level)
 (define log-levels-enabled)
 (define log-levels '(debug info warn error))
 
-(define (set-log-level! level)
+(define (set-gemini-log-level! level)
   (set! log-level level)
   (set! log-levels-enabled
     (let-values (((off on) (break (cut eq? level <>) log-levels)))
       on)))
 
-(set-log-level! 'debug)
+(define (set-gemini-log-port! port-fn)
+  (set! log-port port-fn))
+
+(set-gemini-log-level! 'info)
+(set-gemini-log-port! current-error-port)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

@@ -36,6 +36,7 @@
     (set-session-transport-fd! session (fileno socket))
     (set-session-default-priority! session)
     (set-session-credentials! session cred)
+    (set-server-session-certificate-request! session certificate-request/request)
 
     (log-info "Performing handshake")
     (tls-handshake session)
@@ -66,10 +67,20 @@
 
 (define (accept-loop server cred handler)
   (let loop ()
-    (let ((client (accept server (logior SOCK_NONBLOCK SOCK_CLOEXEC))))
+    (let* ((result (accept server (logior SOCK_NONBLOCK SOCK_CLOEXEC)))
+           (client (car result))
+           (addr   (cdr result)))
       (spawn-fiber
        (lambda ()
-         (handle-client (car client) (cdr client) cred handler))
+         (define error #f)
+         (catch #t
+           (lambda ()
+             (handle-client client addr cred handler))
+           (lambda e
+             (set! error e)))
+         (close-port client)
+         (when error
+           (apply throw error)))
        #:parallel? #t)
       (loop))))
 

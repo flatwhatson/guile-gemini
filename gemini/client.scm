@@ -9,11 +9,6 @@
   #:use-module (web uri)
   #:export (send-gemini-request))
 
-;; (set-log-level! 10)
-;; (set-log-procedure!
-;;  (lambda (level str)
-;;    (format #t "gnutls: [~a] ~a" level str)))
-
 (define (resolve-addresses host port)
   (delete-duplicates
    (getaddrinfo host (if port (number->string port) "1965") AI_NUMERICSERV)
@@ -56,8 +51,8 @@
     (log-info "Performing handshake")
     (tls-handshake session)
 
-    (let* ((data (car (session-peer-certificate-chain session)))
-           (cert (import-x509-certificate data x509-certificate-format/der)))
+    (let* ((chain (session-peer-certificate-chain session))
+           (cert (import-x509-certificate (car chain) x509-certificate-format/der)))
       (unless (x509-certificate-matches-hostname? cert host)
         (throw 'tls-certificate-error
                'host-mismatch host (x509-certificate-dn cert))))
