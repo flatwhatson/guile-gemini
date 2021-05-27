@@ -25,6 +25,7 @@
                         #:recursive? #t
                         #:select? (git-predicate %source-dir)))
     (build-system guile-build-system)
+    (arguments '(#:not-compiled-file-regexp "guix\\.scm$"))
     (inputs `(("guile" ,guile-3.0-latest)
               ("gnutls" ,gnutls)
               ("guile-fibers" ,guile-fibers)))
