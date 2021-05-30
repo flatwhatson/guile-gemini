@@ -1,5 +1,6 @@
 (use-modules (guix packages)
              (guix build-system guile)
+             (guix build utils)
              (guix gexp)
              (guix git)
              (guix git-download)
@@ -15,7 +16,8 @@
   (dirname (current-filename)))
 
 (define %git-commit
-  (get-line (open-input-pipe "git rev-parse HEAD")))
+  (with-directory-excursion %source-dir
+    (get-line (open-input-pipe "git rev-parse HEAD"))))
 
 (define guile-gemini
   (package

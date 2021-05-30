@@ -1,16 +1,40 @@
 # guile-gemini
 
-An implementation of the [Gemini][gemini] protocol for [GNU Guile][guile], using [fibers][] and [gnutls][].
+An implementation of the [Gemini][gemini] protocol for [GNU Guile][guile],
+using [fibers][] and [gnutls][].
 
-WARNING: This library is alpha quality.  Don't use it for *anything*.
+## Installation
 
-## Examples
-
-Install dependencies:
+This project provides a package definition for [GNU Guix][guix], making it
+easy to install from a cloned repository:
 
 ``` sh
-guix install guile guile-fibers gnutls
+guix package -f path/to/guile-gemini/guix.scm
 ```
+
+## Development
+
+This project provides a `.envrc` for [direnv][] to simplify setting up a
+development environment, using the Guix package definition to automatically
+set up dependencies and paths when working in the project directory.
+
+To enable direnv for this project (after installing direnv itself):
+
+``` sh
+cd guile-gemini
+direnv allow
+```
+
+If you would prefer to do things manually, the following will set up an
+equivalent environment:
+
+``` sh
+cd guile-gemini
+guix environment -l guix.scm
+export GUILE_LOAD_PATH="$PWD/src:$GUILE_LOAD_PATH"
+```
+
+## Examples
 
 Generate a server certificate:
 
@@ -56,7 +80,9 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 See [COPYING](COPYING) and [COPYING.LESSER](COPYING.LESSER) for details.
 
-[gemini]: https://gemini.circumlunar.space/
-[guile]: https://www.gnu.org/software/guile/guile.html
+[direnv]: https://direnv.net/
 [fibers]: https://github.com/wingo/fibers
+[gemini]: https://gemini.circumlunar.space/
 [gnutls]: https://gitlab.com/gnutls/gnutls
+[guile]: https://www.gnu.org/software/guile/guile.html
+[guix]: https://guix.gnu.org/
