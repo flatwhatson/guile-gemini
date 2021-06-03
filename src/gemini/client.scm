@@ -67,25 +67,35 @@
 
     session))
 
-(define* (send-gemini-request req #:optional host port cred)
-  (let* ((host (or host (uri-host (gemini-request-uri req))))
-         (port (or port (uri-port (gemini-request-uri req))))
-         (cred (or cred (make-certificate-credentials)))
+(define* (send-gemini-request request #:optional host port credentials)
+  "Send a Gemini REQUEST and return the response.
+
+By default a new TLS connection will be established with the host and port
+described in the request URI, with no TLS client certificate.
+
+The optional HOST and PORT arguments can be used to specify an alternative
+server address, useful for sending proxied requests or bypassing DNS lookup.
+
+The optional CREDENTIALS argument can be used to provide client credentials
+for the TLS negotiation."
+  (let* ((host (or host (uri-host (gemini-request-uri request))))
+         (port (or port (uri-port (gemini-request-uri request))))
+         (credentials (or credentials (make-certificate-credentials)))
 
          (socket  (open-socket host port))
-         (session (open-session socket host cred))
+         (session (open-session socket host credentials))
          (record  (session-record-port session)))
 
     (log-info "Sending request: ~a"
-              (uri->string (gemini-request-uri req)))
+              (uri->string (gemini-request-uri request)))
     (setvbuf record 'block)
-    (write-gemini-request req record)
+    (write-gemini-request request record)
     (force-output record)
 
-    (let ((rsp (read-gemini-response record)))
+    (let ((response (read-gemini-response record)))
       (log-info "Received response: ~a ~a"
-                (gemini-response-status rsp)
-                (gemini-response-meta rsp))
+                (gemini-response-status response)
+                (gemini-response-meta response))
       (close-port record)
       (close-port socket)
-      rsp)))
+      response)))

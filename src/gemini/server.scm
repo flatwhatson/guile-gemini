@@ -86,11 +86,49 @@
 
 (define* (run-server handler #:key
                      (host #f)
+                     (port 1965)
                      (family AF_INET)
                      (addr (if host (inet-pton family host) INADDR_LOOPBACK))
-                     (port 1965)
                      (socket (make-default-socket family addr port))
-                     cred)
+                     credentials)
+  "Run a multi-threaded Gemini server.
+
+HANDLER should be a procedure that takes a Gemini request and returns a Gemini
+response.  CREDENTIALS should be a GnuTLS certificate credentials object
+loaded with the server's TLS certificate and private key.
+
+For example, here is a simple (*cough*) \"Hello, World!\" server:
+
+@example
+ (use-modules (gemini response)
+              (gemini server)
+              (gnutls))
+
+ (define (handler request)
+   (build-gemini-response
+    #:status 20
+    #:meta \"text/gemini\"
+    #:body (string->utf8 \"Hello, world!\")))
+
+ (define %server-cert \"path/to/server-cert.pem\")
+ (define %server-key \"path/to/server-key.pem\")
+
+ (define %server-creds
+   (let ((creds (make-certificate-credentials)))
+     (set-certificate-credentials-x509-key-files!
+      creds %server-cert %server-key
+      x509-certificate-format/pem)
+     creds))
+
+ (run-server handler #:credentials %server-creds)
+@end example
+
+By default the server will listen on localhost, port 1965.  These can be
+overridden with the HOST and PORT keyword arguments.
+
+The server uses fibers to handle multiple requests concurrently, so care
+should be taken to ensure that any shared state accesses in HANDLER are
+thread-safe."
   (let ((addr (getsockname socket)))
     (log-info "Listening on ~a:~a"
               (inet-ntop (sockaddr:fam addr)
@@ -104,6 +142,6 @@
        (run-fibers
         (lambda ()
           (spawn-fiber (lambda ()
-                         (accept-loop socket cred handler)))
+                         (accept-loop socket credentials handler)))
           (wait finished?))))
      finished?)))

@@ -21,7 +21,7 @@ options:
   -v, --verbose                Enable additional log messages
   -p, --proxy=HOST:PORT        Proxy via HOST:PORT
   -c, --cert=path/to/cert.pem  Client certificate file
-  -k, --pkey=path/to/pkey.pem  Client private key file
+  -k, --key=path/to/key.pem    Client private key file
 
 Send a Gemini request and print the response.
 ")))
@@ -52,27 +52,27 @@ Send a Gemini request and print the response.
         (else
          (values proxy #f))))
 
-(define (load-credentials cert pkey)
-  (let ((cred (make-certificate-credentials)))
-    (when (and cert pkey)
+(define (load-credentials cert key)
+  (let ((creds (make-certificate-credentials)))
+    (when (and cert key)
       (log-debug "Loading cert: ~a" cert)
-      (log-debug "Loading pkey: ~a" pkey)
+      (log-debug "Loading key: ~a" key)
       (set-certificate-credentials-x509-key-files!
-       cred cert pkey x509-certificate-format/pem))
-    cred))
+       creds cert key x509-certificate-format/pem))
+    creds))
 
 (define (main args)
   (let* ((option-spec '((help    (single-char #\h) (value #f))
                         (verbose (single-char #\v) (value #f))
                         (proxy   (single-char #\p) (value #t))
                         (cert    (single-char #\c) (value #t))
-                        (pkey    (single-char #\k) (value #t))))
+                        (key     (single-char #\k) (value #t))))
          (opts    (getopt-long args option-spec))
          (help    (option-ref opts 'help #f))
          (verbose (option-ref opts 'verbose #f))
          (proxy   (option-ref opts 'proxy #f))
          (cert    (option-ref opts 'cert #f))
-         (pkey    (option-ref opts 'pkey #f))
+         (key     (option-ref opts 'key #f))
          (rest    (option-ref opts '() '()))
          (uri     (and (pair? rest) (car rest))))
     (cond ((or help (not uri))
@@ -82,8 +82,8 @@ Send a Gemini request and print the response.
              (set-gemini-log-level! 'debug))
            (let-values (((req) (build-request uri))
                         ((host port) (parse-proxy proxy))
-                        ((cred) (load-credentials cert pkey)))
-             (let* ((rsp (send-gemini-request req host port cred))
+                        ((creds) (load-credentials cert key)))
+             (let* ((rsp (send-gemini-request req host port creds))
                     (body (gemini-response-body rsp)))
                (when body
                  (let* ((text (utf8->string body))

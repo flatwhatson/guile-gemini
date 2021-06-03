@@ -34,33 +34,52 @@ guix environment -l guix.scm
 export GUILE_LOAD_PATH="$PWD/src:$GUILE_LOAD_PATH"
 ```
 
+## Documentation
+
+Coming soon!
+
 ## Examples
-
-Generate a server certificate:
-
-``` sh
-certtool --generate-privkey --outfile server-pkey.pem
-certtool --generate-self-signed --load-privkey server-pkey.pem --outfile server-cert.pem
-# Answer "yes" to web server certificate
-# Enter "localhost" as the DNS name
-```
 
 Run the example server:
 
 ``` sh
-examples/hello-world.scm --cert server-cert.pem --pkey server-pkey.pem
+# Generate a self-signed certificate for host "localhost"
+openssl req -x509 -newkey rsa:4096 \
+ -keyout server-key.pem \
+ -out server-cert.pem \
+ -nodes -days 365 -subj /CN=localhost
+
+# Run the server, listening on localhost:1965 by default
+examples/hello-world.scm --cert server-cert.pem --key server-key.pem
 ```
 
-Run the example client:
+Make a request to the local server using the example client:
 
 ``` sh
 examples/gem-fetch.scm localhost
 ```
 
-The client also works on real-world Gemini URIs:
+The example client works on real-world Gemini URIs:
 
 ``` sh
+# Short URIs are supported
 examples/gem-fetch.scm gemini.circumlunar.space
+
+# Full URIs are also supported
+examples/gem-fetch.scm gemini://gemini.circumlunar.space/
+```
+
+The example client supports client certificates:
+
+``` sh
+# Generate a self-signed certificate for user "Anonymous"
+openssl req -x509 -newkey rsa:4096 \
+ -keyout client-key.pem \
+ -out client-cert.pem \
+ -nodes -days 365 -subj /CN=Anonymous
+
+# Request localhost using these credentials
+examples/gem-fetch.scm localhost -c client-cert.pem -k client-key.pem
 ```
 
 ## License
