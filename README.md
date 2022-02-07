@@ -50,23 +50,23 @@ openssl req -x509 -newkey rsa:4096 \
  -nodes -days 365 -subj /CN=localhost
 
 # Run the server, listening on localhost:1965 by default
-examples/hello-world.scm --cert server-cert.pem --key server-key.pem
+example/hello-world.scm --cert server-cert.pem --key server-key.pem
 ```
 
 Make a request to the local server using the example client:
 
 ``` sh
-examples/gem-fetch.scm localhost
+example/gem-fetch.scm localhost
 ```
 
 The example client works on real-world Gemini URIs:
 
 ``` sh
 # Short URIs are supported
-examples/gem-fetch.scm gemini.circumlunar.space
+example/gem-fetch.scm gemini.circumlunar.space
 
 # Full URIs are also supported
-examples/gem-fetch.scm gemini://gemini.circumlunar.space/
+example/gem-fetch.scm gemini://gemini.circumlunar.space:1965/
 ```
 
 The example client supports client certificates:
@@ -79,7 +79,7 @@ openssl req -x509 -newkey rsa:4096 \
  -nodes -days 365 -subj /CN=Anonymous
 
 # Request localhost using these credentials
-examples/gem-fetch.scm localhost -c client-cert.pem -k client-key.pem
+example/gem-fetch.scm localhost -c client-cert.pem -k client-key.pem
 ```
 
 ## License

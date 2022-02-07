@@ -1,6 +1,6 @@
 #!/usr/bin/env -S guile -e main -s
 !#
-(add-to-load-path (dirname (dirname (current-filename))))
+(add-to-load-path (string-append (dirname (dirname (current-filename))) "/src"))
 (use-modules (gemini client)
              (gemini request)
              (gemini response)
