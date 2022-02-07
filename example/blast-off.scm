@@ -5,8 +5,10 @@
              (gemini response)
              (gemini server)
              (gemini util log)
+             (fibers timers)
              (gnutls)
              (ice-9 getopt-long)
+             (ice-9 textual-ports)
              (rnrs bytevectors)
              (srfi srfi-11)
              (web uri))
@@ -28,7 +30,15 @@ Start a simple Gemini server.
   (build-gemini-response
    #:status 20
    #:meta "text/gemini"
-   #:body "Hello, world!"))
+   #:body (lambda (port)
+            (let loop ((n 10))
+              (cond ((= n 0)
+                     (format port "Blast off!\n"))
+                    (else
+                     (format port "~a...\n" n)
+                     (force-output port)
+                     (sleep 1)
+                     (loop (1- n))))))))
 
 (define (load-credentials cert key)
   (let ((creds (make-certificate-credentials)))

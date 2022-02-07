@@ -2,6 +2,7 @@
   #:use-module (gemini util io)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)
+  #:use-module (ice-9 match)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-9)
   #:export (gemini-response?
@@ -102,6 +103,10 @@
   (put-char port #\space)
   (put-string port (gemini-response-meta rsp))
   (put-string port "\r\n")
-  (let ((body (gemini-response-body rsp)))
-    (when body
-      (put-bytevector port body))))
+  (match (gemini-response-body rsp)
+    ((? bytevector? body)
+     (put-bytevector port body))
+    ((? string? body)
+     (put-string port body))
+    ((? procedure? callback)
+     (callback port))))
