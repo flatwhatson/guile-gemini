@@ -30,7 +30,7 @@ equivalent environment:
 
 ``` sh
 cd guile-gemini
-guix environment -l guix.scm
+guix shell -Df guix.scm
 export GUILE_LOAD_PATH="$PWD/src:$GUILE_LOAD_PATH"
 ```
 

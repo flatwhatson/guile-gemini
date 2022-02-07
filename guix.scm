@@ -28,9 +28,9 @@
                         #:select? (git-predicate %source-dir)))
     (build-system guile-build-system)
     (arguments '(#:source-directory "src"))
-    (inputs `(("guile" ,guile-3.0-latest)
-              ("gnutls" ,gnutls)
-              ("guile-fibers" ,guile-fibers)))
+    (inputs (list guile-3.0-latest
+                  gnutls
+                  guile-fibers-1.1))
     (home-page "https://github.com/flatwhatson/guile-gemini")
     (synopsis "Guile implementation of the Gemini protocol")
     (description
