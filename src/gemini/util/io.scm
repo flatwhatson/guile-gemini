@@ -4,8 +4,9 @@
   #:use-module (rnrs bytevectors)
   #:use-module (system foreign)
   #:export (bytevector-slice
-            get-bytevector-crlf
-            get-bytevector-eof))
+            get-tls-bytevector-crlf
+            get-tls-bytevector-eof
+            get-tls-bytevector-some))
 
 (define *cr-byte* (char->integer #\return))
 (define *lf-byte* (char->integer #\newline))
@@ -28,25 +29,36 @@
   (pointer->bytevector
    (bytevector->pointer bv) count start))
 
-(define (get-bytevector-safe! port bv start count)
-  "A wrapper around get-bytevector-some! which handles GnuTLS
-E_PREMATURE_TERMINATION errors by returning an end-of-file object."
+(define (handle-premature-termination thunk)
   (catch 'gnutls-error
-    (lambda ()
-      (get-bytevector-some! port bv start count))
+    thunk
     (lambda (key err proc . rest)
       (if (eq? err error/premature-termination)
           (eof-object)
           (apply throw key err proc rest)))))
 
-(define (get-bytevector-crlf port maxlen)
+(define (get-tls-bytevector-some! port bv start count)
+  "A wrapper around get-bytevector-some! which handles GnuTLS
+E_PREMATURE_TERMINATION errors by returning an end-of-file object."
+  (handle-premature-termination
+    (lambda ()
+      (get-bytevector-some! port bv start count))))
+
+(define (get-tls-bytevector-some port)
+  "A wrapper around get-bytevector-some which handles GnuTLS
+E_PREMATURE_TERMINATION errors by returning an end-of-file object."
+  (handle-premature-termination
+    (lambda ()
+      (get-bytevector-some port))))
+
+(define (get-tls-bytevector-crlf port maxlen)
   "Read a CRLF-terminated sequence of up to MAXLEN bytes from PORT, and return
 a bytevector containing the octects read up-to but not including the CRLF.  If
 a CRLF is not found before MAXLEN or end-of-file, returns #f."
   (let ((bv (make-bytevector (+ maxlen 2))))
     (let loop ((start 0)
                (count (+ maxlen 2)))
-      (let* ((res (get-bytevector-safe! port bv start count))
+      (let* ((res (get-tls-bytevector-some! port bv start count))
              (eof (eof-object? res))
              (end (and (not eof)
                        (bytevector-find-crlf bv start res))))
@@ -61,13 +73,13 @@ a CRLF is not found before MAXLEN or end-of-file, returns #f."
               (else
                (loop (+ start res) (- count res))))))))
 
-(define (get-bytevector-eof port)
+(define (get-tls-bytevector-eof port)
   "Read from PORT until the end-of-file is reached, and return a bytevector
 containing the octets read.  If no data is available, returns #f."
   (let loop ((bv (make-bytevector 4096))
              (start 0)
              (count 4096))
-    (let ((res (get-bytevector-safe! port bv start count)))
+    (let ((res (get-tls-bytevector-some! port bv start count)))
       (cond ((eof-object? res)
              (if (zero? start) #f
                  (bytevector-slice bv 0 start)))

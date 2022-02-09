@@ -96,6 +96,4 @@ for the TLS negotiation."
       (log-info "Received response: ~a ~a"
                 (gemini-response-status response)
                 (gemini-response-meta response))
-      (close-port record)
-      (close-port socket)
       response)))

@@ -47,7 +47,7 @@
 
 (define* (read-gemini-request port #:optional (meta '()))
   "Read a Gemini request from PORT, optionally attaching the metadata META."
-  (let* ((data (or (get-bytevector-crlf port 1024)
+  (let* ((data (or (get-tls-bytevector-crlf port 1024)
                    (bad-request "Invalid request")))
          (uri (string->uri (utf8->string data)))
          (req (make-gemini-request uri meta)))

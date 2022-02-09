@@ -5,10 +5,13 @@
   #:use-module (ice-9 match)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-9)
+  #:use-module (srfi srfi-41)
   #:export (gemini-response?
             gemini-response-status
             gemini-response-meta
             gemini-response-body
+            gemini-response-body-bytes
+            gemini-response-body-stream
             gemini-response-success?
 
             build-gemini-response
@@ -48,6 +51,24 @@
   (gemini-status-success?
    (gemini-response-status rsp)))
 
+(define (gemini-response-body-bytes rsp)
+  (let ((port (gemini-response-body rsp)))
+    (and (port? port)
+         (let ((bytes (get-tls-bytevector-eof port)))
+           (close-port port)
+           bytes))))
+
+(define (gemini-response-body-stream rsp)
+  (let ((port (gemini-response-body rsp)))
+    (and (port? port)
+         (stream-let loop ()
+           (match (get-tls-bytevector-some port)
+             ((? eof-object? _)
+              (close-port port)
+              stream-null)
+             (chunk
+              (stream-cons chunk (loop))))))))
+
 (define (bad-response message . args)
   (throw 'bad-response message args))
 
@@ -79,7 +100,7 @@
 
 (define (read-gemini-response port)
   "Read a Gemini response from PORT."
-  (let* ((data (or (get-bytevector-crlf port (+ 1024 3))
+  (let* ((data (or (get-tls-bytevector-crlf port (+ 1024 3))
                    (bad-response "Invalid response")))
          (b1 (bytevector-u8-ref data 0))
          (b2 (bytevector-u8-ref data 1))
@@ -91,8 +112,7 @@
       (bad-response "Invalid status code"))
     (let* ((status (parse-status-bytes b1 b2))
            (meta (utf8->string rest))
-           (body (and (gemini-status-success? status)
-                      (get-bytevector-eof port)))
+           (body (and (gemini-status-success? status) port))
            (rsp (make-gemini-response status meta body)))
       (validate-gemini-response rsp)
       rsp)))
@@ -107,6 +127,6 @@
     ((? bytevector? body)
      (put-bytevector port body))
     ((? string? body)
-     (put-string port body))
+     (put-bytevector port (string->utf8 body)))
     ((? procedure? callback)
      (callback port))))
