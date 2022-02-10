@@ -38,11 +38,12 @@
 ;; 62 CERTIFICATE NOT VALID       (error message)
 
 (define-record-type <gemini-response>
-  (make-gemini-response status meta body)
+  (make-gemini-response status meta body peer)
   gemini-response?
   (status gemini-response-status)
   (meta gemini-response-meta)
-  (body gemini-response-body))
+  (body gemini-response-body)
+  (peer gemini-response-peer))
 
 (define (gemini-status-success? code)
   (and (>= code 20) (< code 30)))
@@ -77,9 +78,9 @@
   ;; TODO: check for valid meta value
   #t)
 
-(define* (build-gemini-response #:key status meta body (validate? #t))
+(define* (build-gemini-response #:key status meta body peer (validate? #t))
   "Construct a Gemini response."
-  (let ((rsp (make-gemini-response status meta body)))
+  (let ((rsp (make-gemini-response status meta body peer)))
     (when validate?
       (validate-gemini-response rsp))
     rsp))
@@ -98,8 +99,8 @@
   (+ (* (- b1 *zero-byte*) 10)
      (- b2 *zero-byte*)))
 
-(define (read-gemini-response port)
-  "Read a Gemini response from PORT."
+(define* (read-gemini-response port #:optional peer)
+  "Read a Gemini response from PORT with optional PEER information."
   (let* ((data (or (get-tls-bytevector-crlf port (+ 1024 3))
                    (bad-response "Invalid response")))
          (b1 (bytevector-u8-ref data 0))
@@ -113,7 +114,7 @@
     (let* ((status (parse-status-bytes b1 b2))
            (meta (utf8->string rest))
            (body (and (gemini-status-success? status) port))
-           (rsp (make-gemini-response status meta body)))
+           (rsp (make-gemini-response status meta body peer)))
       (validate-gemini-response rsp)
       rsp)))
 

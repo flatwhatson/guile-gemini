@@ -1,4 +1,5 @@
 (define-module (gemini client)
+  #:use-module (gemini peer)
   #:use-module (gemini request)
   #:use-module (gemini response)
   #:use-module (gemini util log)
@@ -46,7 +47,10 @@
     ;; TODO: require TLS 1.3 when sending client cert
     ;; TODO: try regular CA verification of the server cert
     ;; TODO: fall back to TOFU for self-signed certificates
-    ;; https://drewdevault.com/2020/09/21/Gemini-TOFU.html
+    ;; TODO: trust new keys signed by the old key (rotation)
+    ;; gemini://drewdevault.com/2020/09/21/Gemini-TOFU.gmi
+    ;; gemini://warmedal.se/~bjorn/posts/your-gemini-browser-and-server-are-probably-doing-certificates-wrong.gmi
+    ;; gemini://gemini.thegonz.net/glog/220115-keyRotation.gmi
 
     (log-info "Performing handshake")
     (tls-handshake session)
@@ -84,7 +88,11 @@ for the TLS negotiation."
 
          (socket  (open-socket host port))
          (session (open-session socket host credentials))
-         (record  (session-record-port session)))
+         (record  (session-record-port session))
+         (peer    (build-gemini-peer socket session)))
+
+    (log-info "Server common name: ~a" (gemini-peer-common-name peer))
+    (log-info "Server fingerprint: ~a" (gemini-peer-fingerprint peer))
 
     (log-info "Sending request: ~a"
               (uri->string (gemini-request-uri request)))
@@ -92,7 +100,7 @@ for the TLS negotiation."
     (write-gemini-request request record)
     (force-output record)
 
-    (let ((response (read-gemini-response record)))
+    (let ((response (read-gemini-response record peer)))
       (log-info "Received response: ~a ~a"
                 (gemini-response-status response)
                 (gemini-response-meta response))

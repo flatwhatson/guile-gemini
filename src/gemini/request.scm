@@ -6,7 +6,7 @@
   #:use-module (web uri)
   #:export (gemini-request?
             gemini-request-uri
-            gemini-request-meta
+            gemini-request-peer
 
             build-gemini-request
             read-gemini-request
@@ -16,10 +16,10 @@
 ;; TODO: store peer certificate info in request
 
 (define-record-type <gemini-request>
-  (make-gemini-request uri meta)
+  (make-gemini-request uri peer)
   gemini-request?
   (uri gemini-request-uri)
-  (meta gemini-request-meta))
+  (peer gemini-request-peer))
 
 (define (bad-request message . args)
   (throw 'bad-request message args))
@@ -38,19 +38,19 @@
                                                #:path path #:query query
                                                #:fragment fragment
                                                #:validate? validate?))
-                               meta)
+                               peer)
   "Construct a Gemini request."
-  (let ((req (make-gemini-request uri meta)))
+  (let ((req (make-gemini-request uri peer)))
     (when validate?
       (validate-gemini-request req))
     req))
 
-(define* (read-gemini-request port #:optional (meta '()))
-  "Read a Gemini request from PORT, optionally attaching the metadata META."
+(define* (read-gemini-request port #:optional peer)
+  "Read a Gemini request from PORT with optional PEER information."
   (let* ((data (or (get-tls-bytevector-crlf port 1024)
                    (bad-request "Invalid request")))
          (uri (string->uri (utf8->string data)))
-         (req (make-gemini-request uri meta)))
+         (req (make-gemini-request uri peer)))
     (validate-gemini-request req)
     req))
 

@@ -1,6 +1,7 @@
 (define-module (gemini server)
   #:use-module (fibers)
   #:use-module (fibers conditions)
+  #:use-module (gemini peer)
   #:use-module (gemini request)
   #:use-module (gemini response)
   #:use-module (gemini util log)
@@ -50,10 +51,15 @@
             (sockaddr:port addr))
 
   (let* ((session (open-session client cred))
-         (record  (session-record-port session)))
+         (record  (session-record-port session))
+         (peer    (build-gemini-peer client session)))
+
+    (when (gemini-peer-certificate peer)
+      (log-info "Client common name: ~a" (gemini-peer-common-name peer))
+      (log-info "Client fingerprint: ~a" (gemini-peer-fingerprint peer)))
 
     (setvbuf record 'block)
-    (let ((req (read-gemini-request record)))
+    (let ((req (read-gemini-request record peer)))
       (log-info "Received request: ~a"
                 (uri->string (gemini-request-uri req)))
 
