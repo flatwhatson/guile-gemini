@@ -3,6 +3,8 @@
   #:use-module (srfi srfi-11)
   #:use-module (srfi srfi-26)
   #:use-module (ice-9 format)
+  #:use-module (ice-9 textual-ports)
+  #:use-module (ice-9 threads)
   #:export (set-gemini-log-level!
             set-gemini-log-port!
             log-debug
@@ -30,10 +32,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (write-log-msg level msg . args)
-  (let ((time (gettimeofday)))
-    (apply format (log-port)
-           (string-append "[~d.~6,'0d] ~a: " msg "\n")
-           (car time) (cdr time) level args)))
+  (let* ((time (gettimeofday))
+         (line (apply format #f
+                      (string-append "[~d.~6,'0d] ~a: " msg "\n")
+                      (car time) (cdr time) level args)))
+    (monitor
+     (put-string (log-port) line))))
 
 (define-syntax-rule (log-msg level msg args ...)
   (when (memq level log-levels-enabled)
