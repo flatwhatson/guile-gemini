@@ -19,13 +19,13 @@
     (bind sock family addr port)
     sock))
 
-(define (call-with-sigint thunk cvar)
+(define (call-with-sigint thunk action)
   (let ((handler #f))
     (dynamic-wind
       (lambda ()
         (set! handler
-          (sigaction SIGINT (lambda (sig)
-                              (signal-condition! cvar)))))
+              (sigaction SIGINT (lambda (sig)
+                                  (action)))))
       thunk
       (lambda ()
         (if handler
@@ -91,11 +91,10 @@
       (loop))))
 
 (define* (run-server handler #:key
-                     (host #f)
-                     (port 1965)
+                     host port
                      (family AF_INET)
-                     (addr (if host (inet-pton family host) INADDR_LOOPBACK))
-                     (socket (make-default-socket family addr port))
+                     (address (if host (inet-pton family host) INADDR_LOOPBACK))
+                     (socket (make-default-socket family address (or port 1965)))
                      credentials)
   "Run a multi-threaded Gemini server.
 
@@ -150,4 +149,5 @@ thread-safe."
           (spawn-fiber (lambda ()
                          (accept-loop socket credentials handler)))
           (wait finished?))))
-     finished?)))
+     (lambda ()
+       (signal-condition! finished?)))))
