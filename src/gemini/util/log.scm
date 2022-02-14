@@ -32,12 +32,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (write-log-msg level msg . args)
-  (let* ((time (gettimeofday))
+  (let* ((port (log-port))
+         (time (gettimeofday))
          (line (apply format #f
-                      (string-append "[~d.~6,'0d] ~a: " msg "\n")
-                      (car time) (cdr time) level args)))
+                      (string-append "[~d.~6,'0d] ~a: " msg)
+                      (car time) (cdr time) level args))
+         (last (string-ref line (1- (string-length line)))))
     (monitor
-     (put-string (log-port) line))))
+     (put-string port line)
+     (unless (char=? last #\newline)
+       (newline port))
+     (force-output port))))
 
 (define-syntax-rule (log-msg level msg args ...)
   (when (memq level log-levels-enabled)

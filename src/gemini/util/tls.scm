@@ -8,7 +8,7 @@
 ;; (set-log-level! 10)
 ;; (set-log-procedure!
 ;;  (lambda (level str)
-;;    (format #t "gnutls: [~a] ~a" level str)))
+;;    (log-info "gnutls: [~a] ~a" level str)))
 
 (define-syntax-rule (try body ...)
   (begin
