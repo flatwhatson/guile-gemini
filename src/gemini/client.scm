@@ -58,16 +58,13 @@
     (let* ((chain (session-peer-certificate-chain session))
            (cert (import-x509-certificate (car chain) x509-certificate-format/der)))
       (unless (x509-certificate-matches-hostname? cert host)
-        (throw 'tls-certificate-error
-               'host-mismatch host (x509-certificate-dn cert))))
+        (log-warn "TLS hostname mismatch: ~a" (x509-certificate-dn cert))))
 
-    (let* ((status (peer-certificate-status session))
-           (invalid (lset-intersection
-                     eq? status (list certificate-status/expired
-                                      certificate-status/not-activated))))
-      (unless (null? invalid)
-        (throw 'tls-certificate-error
-               'invalid-certificate host invalid)))
+    (let ((status (peer-certificate-status session)))
+      (when (memq certificate-status/expired status)
+        (log-warn "TLS certificate expired"))
+      (when (memq certificate-status/not-activated status)
+        (log-warn "TLS certificate not activated")))
 
     session))
 
