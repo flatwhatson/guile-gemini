@@ -31,7 +31,7 @@
     (inputs (list guile-3.0-latest
                   gnutls
                   guile-fibers-1.1))
-    (home-page "https://github.com/flatwhatson/guile-gemini")
+    (home-page "https://notabug.org/flatwhatson/guile-gemini")
     (synopsis "Guile implementation of the Gemini protocol")
     (description
      "Guile Gemini is an implementation of the Gemini protocol in Guile Scheme,
